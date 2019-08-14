@@ -1,27 +1,31 @@
 /**
- * $Id: URI.js 1164 2009-06-25 13:40:16Z spocke $
+ * URI.js
  *
- * @author Moxiecode
- * @copyright Copyright © 2004-2008, Moxiecode Systems AB, All rights reserved.
+ * Copyright 2009, Moxiecode Systems AB
+ * Released under LGPL License.
+ *
+ * License: http://tinymce.moxiecode.com/license
+ * Contributing: http://tinymce.moxiecode.com/contributing
  */
 
 (function() {
 	var each = tinymce.each;
 
-	/**#@+
-	 * @class This class handles parsing, modification and serialization of URI/URL strings.
-	 * @member tinymce.util.URI
+	/**
+	 * This class handles parsing, modification and serialization of URI/URL strings.
+	 * @class tinymce.util.URI
 	 */
 	tinymce.create('tinymce.util.URI', {
 		/**
 		 * Constucts a new URI instance.
 		 *
 		 * @constructor
+		 * @method URI
 		 * @param {String} u URI string to parse.
 		 * @param {Object} s Optional settings object.
 		 */
 		URI : function(u, s) {
-			var t = this, o, a, b;
+			var t = this, o, a, b, base_url;
 
 			// Trim whitespace
 			u = tinymce.trim(u);
@@ -29,8 +33,9 @@
 			// Default settings
 			s = t.settings = s || {};
 
-			// Strange app protocol or local anchor
-			if (/^(mailto|tel|news|javascript|about):/i.test(u) || /^\s*#/.test(u)) {
+			// Strange app protocol that isn't http/https or local anchor
+			// For example: mailto,skype,tel etc.
+			if (/^([\w\-]+):([^\/]{2})/i.test(u) || /^\s*#/.test(u)) {
 				t.source = u;
 				return;
 			}
@@ -40,8 +45,10 @@
 				u = (s.base_uri ? s.base_uri.protocol || 'http' : 'http') + '://mce_host' + u;
 
 			// Relative path http:// or protocol relative //path
-			if (!/^\w*:?\/\//.test(u))
-				u = (s.base_uri.protocol || 'http') + '://mce_host' + t.toAbsPath(s.base_uri.path, u);
+			if (!/^[\w-]*:?\/\//.test(u)) {
+				base_url = s.base_uri ? s.base_uri.path : new tinymce.util.URI(location.href).directory;
+				u = ((s.base_uri && s.base_uri.protocol) || 'http') + '://mce_host' + t.toAbsPath(base_url, u);
+			}
 
 			// Parse URL (Credits goes to Steave, http://blog.stevenlevithan.com/archives/parseuri)
 			u = u.replace(/@@/g, '(mce_at)'); // Zope 3 workaround, they use @@something
@@ -75,13 +82,10 @@
 			//t.path = t.path || '/';
 		},
 
-		/**#@+
-		 * @method
-		 */
-
 		/**
 		 * Sets the internal path part of the URI.
 		 *
+		 * @method setPath
 		 * @param {string} p Path string to set.
 		 */
 		setPath : function(p) {
@@ -102,8 +106,12 @@
 		/**
 		 * Converts the specified URI into a relative URI based on the current URI instance location.
 		 *
+		 * @method toRelative
 		 * @param {String} u URI to convert into a relative path/URI.
 		 * @return {String} Relative URI from the point specified in the current URI instance.
+		 * @example
+		 * // Converts an absolute URL to an relative URL url will be somedir/somefile.htm
+		 * var url = new tinymce.util.URI('http://www.site.com/dir/').toRelative('http://www.site.com/dir/somedir/somefile.htm');
 		 */
 		toRelative : function(u) {
 			var t = this, o;
@@ -133,19 +141,24 @@
 		/**
 		 * Converts the specified URI into a absolute URI based on the current URI instance location.
 		 *
+		 * @method toAbsolute
 		 * @param {String} u URI to convert into a relative path/URI.
-		 * @param {bool} nh No host and protocol prefix.
+		 * @param {Boolean} nh No host and protocol prefix.
 		 * @return {String} Absolute URI from the point specified in the current URI instance.
+		 * @example
+		 * // Converts an relative URL to an absolute URL url will be http://www.site.com/dir/somedir/somefile.htm
+		 * var url = new tinymce.util.URI('http://www.site.com/dir/').toAbsolute('somedir/somefile.htm');
 		 */
 		toAbsolute : function(u, nh) {
 			var u = new tinymce.util.URI(u, {base_uri : this});
 
-			return u.getURI(this.host == u.host ? nh : 0);
+			return u.getURI(this.host == u.host && this.protocol == u.protocol ? nh : 0);
 		},
 
 		/**
 		 * Converts a absolute path into a relative path.
 		 *
+		 * @method toRelPath
 		 * @param {String} base Base point to convert the path from.
 		 * @param {String} path Absolute path to convert into a relative path.
 		 */
@@ -194,11 +207,12 @@
 		/**
 		 * Converts a relative path into a absolute path.
 		 *
+		 * @method toAbsPath
 		 * @param {String} base Base point to convert the path from.
 		 * @param {String} path Relative path to convert into an absolute path.
 		 */
 		toAbsPath : function(base, path) {
-			var i, nb = 0, o = [], tr;
+			var i, nb = 0, o = [], tr, outPath;
 
 			// Split paths
 			tr = /\/$/.test(path) ? '/' : '';
@@ -238,15 +252,26 @@
 
 			// If /a/b/c or /
 			if (i <= 0)
-				return '/' + o.reverse().join('/') + tr;
+				outPath = o.reverse().join('/');
+			else
+				outPath = base.slice(0, i).join('/') + '/' + o.reverse().join('/');
 
-			return '/' + base.slice(0, i).join('/') + '/' + o.reverse().join('/') + tr;
+			// Add front / if it's needed
+			if (outPath.indexOf('/') !== 0)
+				outPath = '/' + outPath;
+
+			// Add traling / if it's needed
+			if (tr && outPath.lastIndexOf('/') !== outPath.length - 1)
+				outPath += tr;
+
+			return outPath;
 		},
 
 		/**
 		 * Returns the full URI of the internal structure.
 		 *
-		 * @param {bool} nh Optional no host and protocol part. Defaults to false.
+		 * @method getURI
+		 * @param {Boolean} nh Optional no host and protocol part. Defaults to false.
 		 */
 		getURI : function(nh) {
 			var s, t = this;
@@ -283,7 +308,5 @@
 
 			return t.source;
 		}
-
-		/**#@-*/
 	});
 })();
