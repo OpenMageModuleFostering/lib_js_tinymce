@@ -1,0 +1,16 @@
+{
+    "name": "OpenMageModuleFostering/Lib_Js_TinyMCE",
+    "type": "magento-module",
+    "license": "Mixed",
+    "homepage": "",
+    "description": "TinyMCE Javascript Libraries for Magento",
+    "authors": [
+    {
+        "name": "Moshe",
+        "email": "moshe@varien.com"
+    }
+],
+    "suggest": {
+        "magento-hackathon/magento-composer-installer": "*"
+    }
+}
