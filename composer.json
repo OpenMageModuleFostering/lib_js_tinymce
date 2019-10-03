@@ -1,16 +1,19 @@
 {
-    "name": "OpenMageModuleFostering/Lib_Js_TinyMCE",
+    "name": "OpenMageModuleFostering\/Lib_Js_TinyMCE",
     "type": "magento-module",
     "license": "Mixed",
     "homepage": "",
     "description": "TinyMCE Javascript Libraries for Magento",
     "authors": [
-    {
-        "name": "Magento Core Team",
-        "email": "core@magentocommerce.com"
-    }
-],
+        {
+            "name": "Magento Core Team",
+            "email": "core@magentocommerce.com"
+        }
+    ],
     "suggest": {
-        "magento-hackathon/magento-composer-installer": "*"
-    }
+        "magento-hackathon\/magento-composer-installer": "*"
+    },
+    "keywords": [
+        "openmage-module"
+    ]
 }
